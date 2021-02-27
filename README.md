@@ -17,7 +17,22 @@ But where you can't work without it, PyAV is a critical tool.
 Installation
 ------------
 
-Due to the complexity of the dependencies, PyAV is not always the easiest Python package to install. The most straight-foward install is via [conda-forge][conda-forge]:
+Due to the complexity of the dependencies, PyAV is not always the easiest Python package to install from source. Since release 8.0.0 binary wheels are provided on [PyPI][pypi] for Linux, Mac and Windows linked against a modern FFmpeg. You can install these wheels by running:
+
+```
+pip install av
+```
+
+If you want to use your existing FFmpeg/Libav, the C-source version of PyAV is on [PyPI][pypi] too:
+
+```
+pip install av --no-binary av
+```
+
+Alternative installation methods
+--------------------------------
+
+Another way of installing PyAV is via [conda-forge][conda-forge]:
 
 ```
 conda install av -c conda-forge
@@ -25,16 +40,10 @@ conda install av -c conda-forge
 
 See the [Conda quick install][conda-install] docs to get started with (mini)Conda.
 
-If you want to use your existing FFmpeg/Libav, the C-source version of PyAV is on [PyPI][pypi]:
-
-```
-pip install av
-```
-
 And if you want to build from the absolute source (for development or testing):
 
 ```
-git clone git@github.com:mikeboers/PyAV
+git clone git@github.com:PyAV-Org/PyAV
 cd PyAV
 source scripts/activate.sh
 
@@ -55,17 +64,17 @@ Have fun, [read the docs][docs], [come chat with us][gitter], and good luck!
 
 [conda-badge]: https://img.shields.io/conda/vn/conda-forge/av.svg?colorB=CCB39A
 [conda]: https://anaconda.org/conda-forge/av
-[docs-badge]: https://img.shields.io/badge/docs-on%20mikeboers.com-blue.svg
-[docs]: http://docs.mikeboers.com/pyav/develop/
+[docs-badge]: https://img.shields.io/badge/docs-on%20pyav.org-blue.svg
+[docs]: http://pyav.org/docs
 [gitter-badge]: https://img.shields.io/gitter/room/nwjs/nw.js.svg?logo=gitter&colorB=cc2b5e
-[gitter]: https://gitter.im/mikeboers/PyAV
+[gitter]: https://gitter.im/PyAV-Org
 [pypi-badge]: https://img.shields.io/pypi/v/av.svg?colorB=CCB39A
 [pypi]: https://pypi.org/project/av
 
-[github-tests-badge]: https://github.com/mikeboers/PyAV/workflows/tests/badge.svg
-[github-tests]: https://github.com/mikeboers/PyAV/actions?workflow=tests
-[github-badge]: https://img.shields.io/badge/dynamic/xml.svg?label=github&url=https%3A%2F%2Fraw.githubusercontent.com%2Fmikeboers%2FPyAV%2Fdevelop%2FVERSION.txt&query=.&colorB=CCB39A&prefix=v
-[github]: https://github.com/mikeboers/PyAV
+[github-tests-badge]: https://github.com/PyAV-Org/PyAV/workflows/tests/badge.svg
+[github-tests]: https://github.com/PyAV-Org/PyAV/actions?workflow=tests
+[github-badge]: https://img.shields.io/badge/dynamic/xml.svg?label=github&url=https%3A%2F%2Fraw.githubusercontent.com%2FPyAV-Org%2FPyAV%2Fdevelop%2FVERSION.txt&query=.&colorB=CCB39A&prefix=v
+[github]: https://github.com/PyAV-Org/PyAV
 
 [ffmpeg]: http://ffmpeg.org/
 [conda-forge]: https://conda-forge.github.io/

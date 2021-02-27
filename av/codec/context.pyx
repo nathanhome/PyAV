@@ -1,18 +1,18 @@
 from libc.errno cimport EAGAIN
-from libc.stdint cimport uint8_t, int64_t
-from libc.stdlib cimport malloc, realloc, free
+from libc.stdint cimport int64_t, uint8_t
+from libc.stdlib cimport free, malloc, realloc
 from libc.string cimport memcpy
-
 cimport libav as lib
 
 from av.bytesource cimport ByteSource, bytesource
 from av.codec.codec cimport Codec, wrap_codec
 from av.dictionary cimport _Dictionary
-from av.dictionary import Dictionary
-from av.enums cimport define_enum
+from av.enum cimport define_enum
 from av.error cimport err_check
 from av.packet cimport Packet
-from av.utils cimport avdict_to_dict, avrational_to_fraction, to_avrational
+from av.utils cimport avrational_to_fraction, to_avrational
+
+from av.dictionary import Dictionary
 
 
 cdef object _cinit_sentinel = object()
@@ -42,22 +42,102 @@ cdef CodecContext wrap_codec_context(lib.AVCodecContext *c_ctx, const lib.AVCode
     return py_ctx
 
 
-ThreadType = define_enum('ThreadType', (
+ThreadType = define_enum('ThreadType', __name__, (
     ('NONE', 0),
-    ('FRAME', lib.FF_THREAD_FRAME),
-    ('SLICE', lib.FF_THREAD_SLICE),
-    ('AUTO', lib.FF_THREAD_SLICE | lib.FF_THREAD_FRAME),
+    ('FRAME', lib.FF_THREAD_FRAME,
+        """Decode more than one frame at once"""),
+    ('SLICE', lib.FF_THREAD_SLICE,
+        """Decode more than one part of a single frame at once"""),
+    ('AUTO', lib.FF_THREAD_SLICE | lib.FF_THREAD_FRAME,
+        """Either method."""),
 ), is_flags=True)
 
-SkipType = define_enum('SkipType', (
-    ('NONE', lib.AVDISCARD_NONE),
-    ('DEFAULT', lib.AVDISCARD_DEFAULT),
-    ('NONREF', lib.AVDISCARD_NONREF),
-    ('BIDIR', lib.AVDISCARD_BIDIR),
-    ('NONINTRA', lib.AVDISCARD_NONINTRA),
-    ('NONKEY', lib.AVDISCARD_NONKEY),
-    ('ALL', lib.AVDISCARD_ALL),
+SkipType = define_enum('SkipType', __name__, (
+    ('NONE', lib.AVDISCARD_NONE,
+        """Discard nothing"""),
+    ('DEFAULT', lib.AVDISCARD_DEFAULT,
+        """Discard useless packets like 0 size packets in AVI"""),
+    ('NONREF', lib.AVDISCARD_NONREF,
+        """Discard all non reference"""),
+    ('BIDIR', lib.AVDISCARD_BIDIR,
+        """Discard all bidirectional frames"""),
+    ('NONINTRA', lib.AVDISCARD_NONINTRA,
+        """Discard all non intra frames"""),
+    ('NONKEY', lib.AVDISCARD_NONKEY,
+        """Discard all frames except keyframes"""),
+    ('ALL', lib.AVDISCARD_ALL,
+        """Discard all"""),
 ))
+
+Flags = define_enum('Flags', __name__, (
+    ('NONE', 0),
+    ('UNALIGNED', lib.AV_CODEC_FLAG_UNALIGNED,
+        """Allow decoders to produce frames with data planes that are not aligned
+        to CPU requirements (e.g. due to cropping)."""),
+    ('QSCALE', lib.AV_CODEC_FLAG_QSCALE,
+        """Use fixed qscale."""),
+    ('4MV', lib.AV_CODEC_FLAG_4MV,
+        """4 MV per MB allowed / advanced prediction for H.263."""),
+    ('OUTPUT_CORRUPT', lib.AV_CODEC_FLAG_OUTPUT_CORRUPT,
+        """Output even those frames that might be corrupted."""),
+    ('QPEL', lib.AV_CODEC_FLAG_QPEL,
+        """Use qpel MC."""),
+    ('DROPCHANGED', 1 << 5,
+        """Don't output frames whose parameters differ from first
+        decoded frame in stream."""),
+    ('PASS1', lib.AV_CODEC_FLAG_PASS1,
+        """Use internal 2pass ratecontrol in first pass mode."""),
+    ('PASS2', lib.AV_CODEC_FLAG_PASS2,
+        """Use internal 2pass ratecontrol in second pass mode."""),
+    ('LOOP_FILTER', lib.AV_CODEC_FLAG_LOOP_FILTER,
+        """loop filter."""),
+    ('GRAY', lib.AV_CODEC_FLAG_GRAY,
+        """Only decode/encode grayscale."""),
+    ('PSNR', lib.AV_CODEC_FLAG_PSNR,
+        """error[?] variables will be set during encoding."""),
+    ('TRUNCATED', lib.AV_CODEC_FLAG_TRUNCATED,
+        """Input bitstream might be truncated at a random location
+        instead of only at frame boundaries."""),
+    ('INTERLACED_DCT', lib.AV_CODEC_FLAG_INTERLACED_DCT,
+        """Use interlaced DCT."""),
+    ('LOW_DELAY', lib.AV_CODEC_FLAG_LOW_DELAY,
+        """Force low delay."""),
+    ('GLOBAL_HEADER', lib.AV_CODEC_FLAG_GLOBAL_HEADER,
+        """Place global headers in extradata instead of every keyframe."""),
+    ('BITEXACT', lib.AV_CODEC_FLAG_BITEXACT,
+        """Use only bitexact stuff (except (I)DCT)."""),
+    ('AC_PRED', lib.AV_CODEC_FLAG_AC_PRED,
+        """H.263 advanced intra coding / MPEG-4 AC prediction"""),
+    ('INTERLACED_ME', lib.AV_CODEC_FLAG_INTERLACED_ME,
+        """Interlaced motion estimation"""),
+    ('CLOSED_GOP', lib.AV_CODEC_FLAG_CLOSED_GOP),
+), is_flags=True)
+
+Flags2 = define_enum('Flags2', __name__, (
+    ('NONE', 0),
+    ('FAST', lib.AV_CODEC_FLAG2_FAST,
+        """Allow non spec compliant speedup tricks."""),
+    ('NO_OUTPUT', lib.AV_CODEC_FLAG2_NO_OUTPUT,
+        """Skip bitstream encoding."""),
+    ('LOCAL_HEADER', lib.AV_CODEC_FLAG2_LOCAL_HEADER,
+        """Place global headers at every keyframe instead of in extradata."""),
+    ('DROP_FRAME_TIMECODE', lib.AV_CODEC_FLAG2_DROP_FRAME_TIMECODE,
+        """Timecode is in drop frame format. DEPRECATED!!!!"""),
+    ('CHUNKS', lib.AV_CODEC_FLAG2_CHUNKS,
+        """Input bitstream might be truncated at a packet boundaries
+        instead of only at frame boundaries."""),
+    ('IGNORE_CROP', lib.AV_CODEC_FLAG2_IGNORE_CROP,
+        """Discard cropping information from SPS."""),
+    ('SHOW_ALL', lib.AV_CODEC_FLAG2_SHOW_ALL,
+        """Show all frames before the first keyframe"""),
+    ('EXPORT_MVS', lib.AV_CODEC_FLAG2_EXPORT_MVS,
+        """Export motion vectors through frame side data"""),
+    ('SKIP_MANUAL', lib.AV_CODEC_FLAG2_SKIP_MANUAL,
+        """Do not skip samples and export skip information as frame side data"""),
+    ('RO_FLUSH_NOOP', lib.AV_CODEC_FLAG2_RO_FLUSH_NOOP,
+        """Do not reset ASS ReadOrder field on flush (subtitles decoding)"""),
+), is_flags=True)
+
 
 cdef class CodecContext(object):
 
@@ -87,6 +167,61 @@ cdef class CodecContext(object):
         self.ptr.thread_count = 0
         self.ptr.thread_type = 2
 
+    def _get_flags(self):
+        return self.ptr.flags
+
+    def _set_flags(self, value):
+        self.ptr.flags = value
+
+    flags = Flags.property(
+        _get_flags,
+        _set_flags,
+        """Flag property of :class:`.Flags`."""
+    )
+
+    unaligned = flags.flag_property('UNALIGNED')
+    qscale = flags.flag_property('QSCALE')
+    four_mv = flags.flag_property('4MV')
+    output_corrupt = flags.flag_property('OUTPUT_CORRUPT')
+    qpel = flags.flag_property('QPEL')
+    drop_changed = flags.flag_property('DROPCHANGED')
+    pass1 = flags.flag_property('PASS1')
+    pass2 = flags.flag_property('PASS2')
+    loop_filter = flags.flag_property('LOOP_FILTER')
+    gray = flags.flag_property('GRAY')
+    psnr = flags.flag_property('PSNR')
+    truncated = flags.flag_property('TRUNCATED')
+    interlaced_dct = flags.flag_property('INTERLACED_DCT')
+    low_delay = flags.flag_property('LOW_DELAY')
+    global_header = flags.flag_property('GLOBAL_HEADER')
+    bitexact = flags.flag_property('BITEXACT')
+    ac_pred = flags.flag_property('AC_PRED')
+    interlaced_me = flags.flag_property('INTERLACED_ME')
+    closed_gop = flags.flag_property('CLOSED_GOP')
+
+    def _get_flags2(self):
+        return self.ptr.flags2
+
+    def _set_flags2(self, value):
+        self.ptr.flags2 = value
+
+    flags2 = Flags2.property(
+        _get_flags2,
+        _set_flags2,
+        """Flag property of :class:`.Flags2`."""
+    )
+
+    fast = flags2.flag_property('FAST')
+    no_output = flags2.flag_property('NO_OUTPUT')
+    local_header = flags2.flag_property('LOCAL_HEADER')
+    drop_frame_timecode = flags2.flag_property('DROP_FRAME_TIMECODE')
+    chunks = flags2.flag_property('CHUNKS')
+    ignore_crop = flags2.flag_property('IGNORE_CROP')
+    show_all = flags2.flag_property('SHOW_ALL')
+    export_mvs = flags2.flag_property('EXPORT_MVS')
+    skip_manual = flags2.flag_property('SKIP_MANUAL')
+    ro_flush_noop = flags2.flag_property('RO_FLUSH_NOOP')
+
     property extradata:
         def __get__(self):
             if self.ptr.extradata_size > 0:
@@ -110,6 +245,7 @@ cdef class CodecContext(object):
     property is_encoder:
         def __get__(self):
             return lib.av_codec_is_encoder(self.ptr.codec)
+
     property is_decoder:
         def __get__(self):
             return lib.av_codec_is_decoder(self.ptr.codec)
@@ -179,7 +315,7 @@ cdef class CodecContext(object):
             Anything that can be turned into a :class:`.ByteSource` is fine.
             ``None`` or empty inputs will flush the parser's buffers.
 
-        :return: ``list`` of :class:`.Packet` newly availible.
+        :return: ``list`` of :class:`.Packet` newly available.
 
         """
 
@@ -404,6 +540,18 @@ cdef class CodecContext(object):
         def __set__(self, value):
             to_avrational(value, &self.ptr.time_base)
 
+    property codec_tag:
+        def __get__(self):
+            return self.ptr.codec_tag.to_bytes(4, byteorder="little", signed=False).decode(
+                encoding="ascii")
+
+        def __set__(self, value):
+            if isinstance(value, str) and len(value) == 4:
+                self.ptr.codec_tag = int.from_bytes(value.encode(encoding="ascii"),
+                                                    byteorder="little", signed=False)
+            else:
+                raise ValueError("Codec tag should be a 4 character string.")
+
     property ticks_per_frame:
         def __get__(self):
             return self.ptr.ticks_per_frame
@@ -429,9 +577,13 @@ cdef class CodecContext(object):
         def __set__(self, int value):
             self.ptr.bit_rate_tolerance = value
 
-    # TODO: Does it conceptually make sense that this is on streams, instead
-    # of on the container?
     property thread_count:
+        """How many threads to use; 0 means auto.
+
+        Wraps :ffmpeg:`AVCodecContext.thread_count`.
+
+        """
+
         def __get__(self):
             return self.ptr.thread_count
 
@@ -441,7 +593,12 @@ cdef class CodecContext(object):
             self.ptr.thread_count = value
 
     property thread_type:
-        """One of :class:`.ThreadType`."""
+        """One of :class:`.ThreadType`.
+
+        Wraps :ffmpeg:`AVCodecContext.thread_type`.
+
+        """
+
         def __get__(self):
             return ThreadType.get(self.ptr.thread_type, create=True)
 
@@ -451,7 +608,12 @@ cdef class CodecContext(object):
             self.ptr.thread_type = ThreadType[value].value
 
     property skip_frame:
-        """One of :class:`.SkipType`."""
+        """One of :class:`.SkipType`.
+
+        Wraps ffmpeg:`AVCodecContext.skip_frame`.
+
+        """
+
         def __get__(self):
             return SkipType._get(self.ptr.skip_frame, create=True)
 

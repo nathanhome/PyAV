@@ -3,9 +3,6 @@ cimport libav as lib
 from av.descriptor cimport wrap_avclass
 from av.filter.pad cimport alloc_filter_pads
 
-cdef extern from "filter-shims.c" nogil:
-    cdef const lib.AVFilter* pyav_filter_iterate(void **opaque)
-
 
 cdef object _cinit_sentinel = object()
 
@@ -29,7 +26,7 @@ cdef class Filter(object):
     def __cinit__(self, name):
         if name is _cinit_sentinel:
             return
-        if not isinstance(name, basestring):
+        if not isinstance(name, str):
             raise TypeError('takes a filter name as a string')
         self.ptr = lib.avfilter_get_by_name(name)
         if not self.ptr:
@@ -97,7 +94,7 @@ cdef get_filter_names():
     cdef const lib.AVFilter *ptr
     cdef void *opaque = NULL
     while True:
-        ptr = pyav_filter_iterate(&opaque)
+        ptr = lib.av_filter_iterate(&opaque)
         if ptr:
             names.add(ptr.name)
         else:

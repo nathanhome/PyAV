@@ -16,18 +16,72 @@ We are operating with `semantic versioning <http://semver.org>`_.
     Note that they these tags will not actually close the issue/PR until they
     are merged into the "default" branch, currently "develop").
 
+v8.0.4.dev0
+------
 
-v7.0.0.dev0
------------
+
+v8.0.3
+------
+
+Minor:
+
+- Update FFmpeg to 4.3.1 for the binary wheels.
+
+v8.0.2
+------
+
+Minor:
+
+- Enable GnuTLS support in the FFmpeg build used for binary wheels (:issue:`675`).
+- Make binary wheels compatible with Mac OS X 10.9+ (:issue:`662`).
+- Drop Python 2.x buffer protocol code.
+- Remove references to previous repository location.
+
+v8.0.1
+------
+
+Minor:
+
+- Enable additional FFmpeg features in the binary wheels.
+- Use os.fsencode for both input and output file names (:issue:`600`).
+
+v8.0.0
+------
+
+Major:
+
+- Drop support for Python 2 and Python 3.4.
+- Provide binary wheels for Linux, Mac and Windows.
+
+Minor:
+
+- Remove shims for obsolete FFmpeg versions (:issue:`588`).
+- Add yuvj420p format for :meth:`VideoFrame.from_ndarray` and :meth:`VideoFrame.to_ndarray` (:issue:`583`).
+- Add support for palette formats in :meth:`VideoFrame.from_ndarray` and :meth:`VideoFrame.to_ndarray` (:issue:`601`).
+- Fix Python 3.8 deprecation warning related to abstract base classes (:issue:`616`).
+- Remove ICC profiles from logos (:issue:`622`).
+
+Fixes:
+
+- Avoid infinite timeout in :func:`av.open` (:issue:`589`).
+
+v7.0.1
+------
+
+Fixes:
+
+- Removed deprecated ``AV_FRAME_DATA_QP_TABLE_*`` enums. (:issue:`607`)
+
+
+v7.0.0
+------
 
 Major:
 
 - Drop support for FFmpeg < 4.0. (:issue:`559`)
-- Introduce per-error exceptions, and mirror the builtin exception heirarchy.
-  It is recommended to examine your error handling code, as common FFmpeg errors
-  will result in `ValueError` baseclasses now. (:issue:`563`)
-- Data stream's `encode` and `decode` return empty lists instead of none
-  allowing common API use patterns with data streams.
+- Introduce per-error exceptions, and mirror the builtin exception hierarchy. It is recommended to examine your error handling code, as common FFmpeg errors will result in `ValueError` baseclasses now. (:issue:`563`)
+- Data stream's `encode` and `decode` return empty lists instead of none allowing common API use patterns with data streams.
+- Remove ``whence`` parameter from :meth:`InputContainer.seek` as non-time seeking doesn't seem to actually be supported by any FFmpeg formats.
 
 Minor:
 
@@ -35,6 +89,8 @@ Minor:
 - Filters support audio in general, and a new :meth:`.Graph.add_abuffer`. (:issue:`562`)
 - :func:`av.open` supports `timeout` parameters. (:issue:`480` and :issue:`316`)
 - Expose :attr:`Stream.base_rate` and :attr:`Stream.guessed_rate`. (:issue:`564`)
+- :meth:`.VideoFrame.reformat` can specify interpolation.
+- Expose many sets of flags.
 
 Fixes:
 
@@ -42,6 +98,8 @@ Fixes:
 - Fix wrong attribute in ByteSource. (:issue:`340`)
 - Remove exception that would break audio remuxing. (:issue:`537`)
 - Log messages include last FFmpeg error log in more helpful way.
+- Use AVCodecParameters so FFmpeg doesn't complain. (:issue:`222`)
+
 
 v6.2.0
 ------

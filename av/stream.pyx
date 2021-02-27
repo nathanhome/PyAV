@@ -1,14 +1,17 @@
-from libc.stdint cimport uint8_t, int64_t
-from libc.string cimport memcpy
 from cpython cimport PyWeakref_NewRef
-
+from libc.stdint cimport int64_t, uint8_t
+from libc.string cimport memcpy
 cimport libav as lib
-
 
 from av.codec.context cimport wrap_codec_context
 from av.error cimport err_check
 from av.packet cimport Packet
-from av.utils cimport dict_to_avdict, avdict_to_dict, avrational_to_fraction, to_avrational
+from av.utils cimport (
+    avdict_to_dict,
+    avrational_to_fraction,
+    dict_to_avdict,
+    to_avrational
+)
 
 from av import deprecation
 
@@ -126,14 +129,19 @@ cdef class Stream(object):
         setattr(self.codec_context, name, value)
 
     cdef _finalize_for_output(self):
+
         dict_to_avdict(
             &self._stream.metadata, self.metadata,
-            clear=True,
             encoding=self.container.metadata_encoding,
             errors=self.container.metadata_errors,
         )
+
         if not self._stream.time_base.num:
             self._stream.time_base = self._codec_context.time_base
+
+        # It prefers if we pass it parameters via this other object.
+        # Lets just copy what we want.
+        err_check(lib.avcodec_parameters_from_context(self._stream.codecpar, self._stream.codec))
 
     def encode(self, frame=None):
         """
@@ -163,7 +171,7 @@ cdef class Stream(object):
         return self.codec_context.decode(packet)
 
     @deprecation.method
-    def seek(self, offset, whence='time', backward=True, any_frame=False):
+    def seek(self, offset, **kwargs):
         """
         .. seealso:: :meth:`.InputContainer.seek` for documentation on parameters.
             The only difference is that ``offset`` will be interpreted in
@@ -173,7 +181,7 @@ cdef class Stream(object):
             Use :meth:`.InputContainer.seek` with ``stream`` argument instead.
 
         """
-        self.container.seek(offset, whence, backward, any_frame, stream=self)
+        self.container.seek(offset, stream=self, **kwargs)
 
     property id:
         """

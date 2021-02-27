@@ -1,12 +1,9 @@
-# coding: utf8
-
-import os
 import sys
 import unittest
 
 import av
 
-from .common import TestCase, fate_suite
+from .common import TestCase, fate_suite, is_windows, skip_tests
 
 
 # On Windows, Python 3.0 - 3.5 have issues handling unicode filenames.
@@ -14,10 +11,7 @@ from .common import TestCase, fate_suite
 #
 # https://www.python.org/dev/peps/pep-0529/
 
-broken_unicode = (
-    os.name == 'nt' and
-    sys.version_info >= (3, 0) and
-    sys.version_info < (3, 6))
+broken_unicode = is_windows and sys.version_info < (3, 6)
 
 
 class TestContainers(TestCase):
@@ -27,7 +21,7 @@ class TestContainers(TestCase):
             self.assertEqual(container.format.long_name, 'QuickTime / MOV')
             self.assertEqual(len(container.streams), 1)
 
-    @unittest.skipIf(broken_unicode, 'Unicode filename handling is broken')
+    @unittest.skipIf(broken_unicode or 'unicode_filename' in skip_tests, 'Unicode filename handling is broken')
     def test_unicode_filename(self):
 
         av.open(self.sandboxed(u'¢∞§¶•ªº.mov'), 'w')

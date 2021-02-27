@@ -32,15 +32,15 @@ API Reference
 
 from __future__ import absolute_import
 
-from libc.stdio cimport printf, fprintf, stderr
-from libc.stdlib cimport malloc, free
-
+from libc.stdio cimport fprintf, printf, stderr
+from libc.stdlib cimport free, malloc
 cimport libav as lib
 
 from threading import Lock
 import logging
 import os
 import sys
+
 
 try:
     from threading import get_ident
@@ -105,8 +105,8 @@ def set_level(int level):
     """set_level(level)
 
     Sets logging threshold when converting from FFmpeg's logging system
-    to Python's. It is recommended to use the constants availible in this
-    module to set the level: ``QUIET``, ``PANIC``, ``FATAL``, ``ERROR``,
+    to Python's. It is recommended to use the constants available in this
+    module to set the level: ``PANIC``, ``FATAL``, ``ERROR``,
     ``WARNING``, ``INFO``, ``VERBOSE``, and ``DEBUG``.
 
     While less efficient, it is generally preferable to modify logging
@@ -287,7 +287,7 @@ cdef log_callback_gil(int level, const char *c_name, const char *c_message):
     log = (level, name, message)
 
     # We have to filter it ourselves, but we will still process it in general so
-    # it is availible to our error handling.
+    # it is available to our error handling.
     # Note that FFmpeg's levels are backwards from Python's.
     cdef bint is_interesting = level <= level_threshold
 

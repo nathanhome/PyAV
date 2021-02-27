@@ -1,8 +1,8 @@
-from libc.stdint cimport int64_t
-from libc.stdlib cimport malloc, free
 from cython.operator cimport dereference
+from libc.stdint cimport int64_t
+from libc.stdlib cimport free, malloc
 
-import sys
+import os
 import time
 
 cimport libav as lib
@@ -10,21 +10,13 @@ cimport libav as lib
 from av.container.core cimport timeout_info
 from av.container.input cimport InputContainer
 from av.container.output cimport OutputContainer
-from av.container.pyio cimport pyio_read, pyio_write, pyio_seek
+from av.container.pyio cimport pyio_read, pyio_seek, pyio_write
+from av.enum cimport define_enum
 from av.error cimport err_check, stash_exception
 from av.format cimport build_container_format
-from av.utils cimport dict_to_avdict
 
 from av.dictionary import Dictionary
 from av.logging import Capture as LogCapture
-
-try:
-    from os import fsencode
-except ImportError:
-    _fsencoding = sys.getfilesystemencoding()
-
-    def fsencode(s):
-        return s.encode(_fsencoding)
 
 
 ctypedef int64_t (*seek_func_t)(void *opaque, int64_t offset, int whence) nogil
@@ -33,7 +25,7 @@ ctypedef int64_t (*seek_func_t)(void *opaque, int64_t offset, int whence) nogil
 cdef object _cinit_sentinel = object()
 
 
-# We want to use the monotonic clock if it is availible.
+# We want to use the monotonic clock if it is available.
 cdef object clock = getattr(time, 'monotonic', time.time)
 
 cdef int interrupt_cb (void *p) nogil:
@@ -59,6 +51,51 @@ cdef int interrupt_cb (void *p) nogil:
     return 0
 
 
+Flags = define_enum('Flags', __name__, (
+    ('GENPTS', lib.AVFMT_FLAG_GENPTS,
+        "Generate missing pts even if it requires parsing future frames."),
+    ('IGNIDX', lib.AVFMT_FLAG_IGNIDX,
+        "Ignore index."),
+    ('NONBLOCK', lib.AVFMT_FLAG_NONBLOCK,
+        "Do not block when reading packets from input."),
+    ('IGNDTS', lib.AVFMT_FLAG_IGNDTS,
+        "Ignore DTS on frames that contain both DTS & PTS."),
+    ('NOFILLIN', lib.AVFMT_FLAG_NOFILLIN,
+        "Do not infer any values from other values, just return what is stored in the container."),
+    ('NOPARSE', lib.AVFMT_FLAG_NOPARSE,
+        """Do not use AVParsers, you also must set AVFMT_FLAG_NOFILLIN as the fillin code works on frames and no parsing -> no frames.
+
+        Also seeking to frames can not work if parsing to find frame boundaries has been disabled."""),
+    ('NOBUFFER', lib.AVFMT_FLAG_NOBUFFER,
+        "Do not buffer frames when possible."),
+    ('CUSTOM_IO', lib.AVFMT_FLAG_CUSTOM_IO,
+        "The caller has supplied a custom AVIOContext, don't avio_close() it."),
+    ('DISCARD_CORRUPT', lib.AVFMT_FLAG_DISCARD_CORRUPT,
+        "Discard frames marked corrupted."),
+    ('FLUSH_PACKETS', lib.AVFMT_FLAG_FLUSH_PACKETS,
+        "Flush the AVIOContext every packet."),
+    ('BITEXACT', lib.AVFMT_FLAG_BITEXACT,
+        """When muxing, try to avoid writing any random/volatile data to the output.
+
+        This includes any random IDs, real-time timestamps/dates, muxer version, etc.
+        This flag is mainly intended for testing."""),
+    ('MP4A_LATM', lib.AVFMT_FLAG_MP4A_LATM,
+        "Enable RTP MP4A-LATM payload"),
+    ('SORT_DTS', lib.AVFMT_FLAG_SORT_DTS,
+        "Try to interleave outputted packets by dts (using this flag can slow demuxing down)."),
+    ('PRIV_OPT', lib.AVFMT_FLAG_PRIV_OPT,
+        "Enable use of private options by delaying codec open (this could be made default once all code is converted)."),
+    ('KEEP_SIDE_DATA', lib.AVFMT_FLAG_KEEP_SIDE_DATA,
+        "Deprecated, does nothing."),
+    ('FAST_SEEK', lib.AVFMT_FLAG_FAST_SEEK,
+        "Enable fast, but inaccurate seeks for some formats."),
+    ('SHORTEST', lib.AVFMT_FLAG_SHORTEST,
+        "Stop muxing when the shortest stream stops."),
+    ('AUTO_BSF', lib.AVFMT_FLAG_AUTO_BSF,
+        "Add bitstream filters as requested by the muxer."),
+), is_flags=True)
+
+
 cdef class Container(object):
 
     def __cinit__(self, sentinel, file_, format_name, options,
@@ -73,11 +110,11 @@ cdef class Container(object):
         if not self.writeable and not isinstance(self, InputContainer):
             raise RuntimeError('Container cannot be directly extended.')
 
-        if isinstance(file_, basestring):
+        if isinstance(file_, str):
             self.name = file_
         else:
             self.name = getattr(file_, 'name', '<none>')
-            if not isinstance(self.name, basestring):
+            if not isinstance(self.name, str):
                 raise TypeError("File's name attribute must be string-like.")
             self.file = file_
 
@@ -97,7 +134,7 @@ cdef class Container(object):
         self.input_was_opened = False
         cdef int res
 
-        cdef bytes name_obj = fsencode(self.name) if isinstance(self.name, unicode) else self.name
+        cdef bytes name_obj = os.fsencode(self.name)
         cdef char *name = name_obj
         cdef seek_func_t seek_func = NULL
 
@@ -234,10 +271,41 @@ cdef class Container(object):
     cdef start_timeout(self):
         self.interrupt_callback_info.start_time = clock()
 
+    def _get_flags(self):
+        return self.ptr.flags
+
+    def _set_flags(self, value):
+        self.ptr.flags = value
+
+    flags = Flags.property(
+        _get_flags,
+        _set_flags,
+        """Flags property of :class:`.Flags`"""
+    )
+
+    gen_pts = flags.flag_property('GENPTS')
+    ign_idx = flags.flag_property('IGNIDX')
+    non_block = flags.flag_property('NONBLOCK')
+    ign_dts = flags.flag_property('IGNDTS')
+    no_fill_in = flags.flag_property('NOFILLIN')
+    no_parse = flags.flag_property('NOPARSE')
+    no_buffer = flags.flag_property('NOBUFFER')
+    custom_io = flags.flag_property('CUSTOM_IO')
+    discard_corrupt = flags.flag_property('DISCARD_CORRUPT')
+    flush_packets = flags.flag_property('FLUSH_PACKETS')
+    bit_exact = flags.flag_property('BITEXACT')
+    mp4a_latm = flags.flag_property('MP4A_LATM')
+    sort_dts = flags.flag_property('SORT_DTS')
+    priv_opt = flags.flag_property('PRIV_OPT')
+    keep_side_data = flags.flag_property('KEEP_SIDE_DATA')
+    fast_seek = flags.flag_property('FAST_SEEK')
+    shortest = flags.flag_property('SHORTEST')
+    auto_bsf = flags.flag_property('AUTO_BSF')
+
 
 def open(file, mode=None, format=None, options=None,
          container_options=None, stream_options=None,
-         metadata_encoding=None, metadata_errors='strict',
+         metadata_encoding='utf-8', metadata_errors='strict',
          buffer_size=32768, timeout=None):
     """open(file, mode='r', **kwargs)
 
@@ -250,10 +318,9 @@ def open(file, mode=None, format=None, options=None,
     :param dict container_options: Options to pass to the container.
     :param list stream_options: Options to pass to each stream.
     :param str metadata_encoding: Encoding to use when reading or writing file metadata.
-        Defaults to utf-8, except no decoding is performed by default when
-        reading on Python 2 (returning ``str`` instead of ``unicode``).
+        Defaults to ``"utf-8"``.
     :param str metadata_errors: Specifies how to handle encoding errors; behaves like
-        ``str.encode`` parameter. Defaults to strict.
+        ``str.encode`` parameter. Defaults to ``"strict"``.
     :param int buffer_size: Size of buffer for Python input/output operations in bytes.
         Honored only when ``file`` is a file-like object. Defaults to 32768 (32k).
     :param timeout: How many seconds to wait for data before giving up, as a float, or a
@@ -265,6 +332,8 @@ def open(file, mode=None, format=None, options=None,
 
         >>> # Open webcam on OS X.
         >>> av.open(format='avfoundation', file='0') # doctest: +SKIP
+
+    .. seealso:: :ref:`garbage_collection`
 
     More information on using input and output devices is available on the
     `FFmpeg website <https://www.ffmpeg.org/ffmpeg-devices.html>`_.

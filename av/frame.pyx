@@ -2,6 +2,8 @@ from av.utils cimport avrational_to_fraction, to_avrational
 
 from fractions import Fraction
 
+from av.sidedata.sidedata import SideDataContainer
+
 
 cdef class Frame(object):
     """
@@ -24,8 +26,8 @@ cdef class Frame(object):
         return 'av.%s #%d pts=%s at 0x%x>' % (
             self.__class__.__name__,
             self.index,
-            id(self),
             self.pts,
+            id(self),
         )
 
     cdef _copy_internal_attributes(self, Frame source, bint data_layout=True):
@@ -128,3 +130,9 @@ cdef class Frame(object):
         :type: bool
         """
         def __get__(self): return self.ptr.decode_error_flags != 0 or bool(self.ptr.flags & lib.AV_FRAME_FLAG_CORRUPT)
+
+    @property
+    def side_data(self):
+        if self._side_data is None:
+            self._side_data = SideDataContainer(self)
+        return self._side_data

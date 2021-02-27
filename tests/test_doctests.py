@@ -5,16 +5,9 @@ import re
 
 import av
 
-from .common import is_py3
-
-
-try:
-    basestring
-except NameError:
-    basestring = str
-
 
 def fix_doctests(suite):
+
     for case in suite._tests:
 
         # Add some more flags.
@@ -31,14 +24,15 @@ def fix_doctests(suite):
         for example in case._dt_test.examples:
 
             # Remove b prefix from strings.
-            if is_py3 and example.want.startswith("b'"):
+            if example.want.startswith("b'"):
                 example.want = example.want[1:]
 
 
 def register_doctests(mod):
 
-    if isinstance(mod, basestring):
+    if isinstance(mod, str):
         mod = __import__(mod, fromlist=[''])
+
     try:
         suite = doctest.DocTestSuite(mod)
     except ValueError:

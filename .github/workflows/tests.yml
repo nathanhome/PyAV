@@ -22,10 +22,8 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
         name: Checkout
-        with:
-            fetch-depth: 1
 
       - name: Python
         uses: actions/setup-python@v1
@@ -59,10 +57,8 @@ jobs:
           - {os: ubuntu-latest, python: 3.7, ffmpeg: "4.2", extras: true}
           - {os: ubuntu-latest, python: 3.7, ffmpeg: "4.1"}
           - {os: ubuntu-latest, python: 3.7, ffmpeg: "4.0"}
-          - {os: ubuntu-latest, python: 2.7, ffmpeg: "4.2"}
           - {os: ubuntu-latest, python: pypy3, ffmpeg: "4.2"}
-          #- {os: ubuntu-latest, python: pypy2, ffmpeg: "4.2"}
-          - {os: macos-latest,  python: 3.7, ffmpeg: "4.2"}
+          #- {os: macos-latest,  python: 3.7, ffmpeg: "4.2"}
 
     env:
       PYAV_PYTHON: python${{ matrix.config.python }}
@@ -70,10 +66,8 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       name: Checkout
-      with:
-          fetch-depth: 1
 
     - name: Python ${{ matrix.config.python }}
       uses: actions/setup-python@v1
@@ -156,9 +150,7 @@ jobs:
     steps:
 
     - name: Checkout
-      uses: actions/checkout@v1
-      with:
-          fetch-depth: 1
+      uses: actions/checkout@v2
 
     - name: Set up Conda
       shell: bash
@@ -188,4 +180,76 @@ jobs:
         conda activate pyav
         python setup.py test
 
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Build source package
+        run: |
+          pip install cython
+          python scripts/fetch-vendor /tmp/vendor
+          PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig make build
+          python setup.py sdist
+      - name: Upload source package
+        uses: actions/upload-artifact@v1
+        with:
+          name: dist
+          path: dist/
 
+  package-wheel:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Install packages
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install pkg-config
+      - name: Build wheels
+        env:
+          CIBW_BEFORE_BUILD: pip install cython && python scripts/fetch-vendor /tmp/vendor
+          CIBW_BEFORE_BUILD_WINDOWS: pip install cython && python scripts\fetch-vendor C:\cibw\vendor
+          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib:$LD_LIBRARY_PATH PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
+          CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
+          CIBW_ENVIRONMENT_WINDOWS: INCLUDE=C:\\cibw\\vendor\\include LIB=C:\\cibw\\vendor\\lib PYAV_SKIP_TESTS=unicode_filename
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: python scripts/inject-dll {wheel} {dest_dir} C:\cibw\vendor\bin
+          CIBW_SKIP: cp27-* pp27-* pp36-win*
+          CIBW_TEST_COMMAND: mv {project}/av {project}/av.disabled && python -m unittest discover -t {project} -s tests && mv {project}/av.disabled {project}/av
+          # disable test suite on OS X, the SSL config seems broken
+          CIBW_TEST_COMMAND_MACOS: true
+          CIBW_TEST_REQUIRES: numpy
+        run: |
+          pip install cibuildwheel
+          cibuildwheel --output-dir dist
+        shell: bash
+      - name: Upload wheels
+        uses: actions/upload-artifact@v1
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [package-source, package-wheel]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v1
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}

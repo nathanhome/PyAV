@@ -1,5 +1,6 @@
 from __future__ import division
 
+import errno
 import logging
 import threading
 
@@ -60,7 +61,7 @@ class TestLogging(TestCase):
             do_log('bar')
             do_log('baz')
 
-        logs = [l for l in logs if l[1] == 'test']
+        logs = [log for log in logs if log[1] == 'test']
 
         self.assertEqual(logs, [
             (av.logging.INFO, 'test', 'foo'),
@@ -76,7 +77,7 @@ class TestLogging(TestCase):
         log = (av.logging.ERROR, 'test', 'This is a test.')
         av.logging.log(*log)
         try:
-            av.error.err_check(-1)
+            av.error.err_check(-errno.EPERM)
         except OSError as e:
             self.assertEqual(e.log, log)
         else:

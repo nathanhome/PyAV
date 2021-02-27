@@ -2,13 +2,13 @@ cimport libav as lib
 
 from av.logging cimport get_last_error
 
-from av.enums import define_enum
-
 from threading import local
 import errno
 import os
 import sys
 import traceback
+
+from av.enum import define_enum
 
 
 # Will get extended with all of the exceptions.
@@ -16,10 +16,6 @@ __all__ = [
     'ErrorType', 'FFmpegError', 'LookupError', 'HTTPError', 'HTTPClientError',
     'UndefinedError',
 ]
-
-
-cdef is_py3 = sys.version_info[0] >= 3
-cdef is_py33 = sys.version_info >= (3, 3)
 
 
 cpdef code_to_tag(int code):
@@ -45,12 +41,11 @@ cpdef tag_to_code(bytes tag):
     """
     if len(tag) != 4:
         raise ValueError("Error tags are 4 bytes.")
-    atag = bytearray(tag)  # Python 2. Ugh.
     return (
-        (atag[0]) +
-        (atag[1] << 8) +
-        (atag[2] << 16) +
-        (atag[3] << 24)
+        (tag[0]) +
+        (tag[1] << 8) +
+        (tag[2] << 16) +
+        (tag[3] << 24)
     )
 
 
@@ -68,7 +63,7 @@ class FFmpegError(Exception):
 
     .. attribute:: filename
 
-        The filename that was being operated on (if availible).
+        The filename that was being operated on (if available).
 
     .. attribute:: type
 
@@ -175,7 +170,7 @@ _ffmpeg_specs = (
 
 
 # The actual enum.
-ErrorType = define_enum("ErrorType", [x[:2] for x in _ffmpeg_specs], allow_user_create=True)
+ErrorType = define_enum("ErrorType", __name__, [x[:2] for x in _ffmpeg_specs])
 
 # It has to be monkey-patched.
 ErrorType.__doc__ = """An enumeration of FFmpeg's error types.
@@ -362,7 +357,7 @@ cpdef make_error(int res, filename=None, log=None):
         c_buffer = py_buffer
         lib.av_strerror(res, c_buffer, lib.AV_ERROR_MAX_STRING_SIZE)
         py_buffer = c_buffer
-        message = py_buffer.decode('latin1') if is_py3 else py_buffer
+        message = py_buffer.decode('latin1')
 
         # Default to the OS if we have no message; this should not get called.
         message = message or os.strerror(code)
