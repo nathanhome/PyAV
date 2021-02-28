@@ -491,6 +491,3 @@ cdef extern from "libavcodec/avcodec.h" nogil:
         AVBSFContext **ctx
     )     
 
-
-=======
-
